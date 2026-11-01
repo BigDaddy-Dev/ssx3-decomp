@@ -54,14 +54,14 @@ Heavy processes (cargo build/test, game runs) always go through `flock target/.h
 - P0–P2 done: build + upstream tests, guard hooks, dispatcher, ledger, state-trace hook, PCSX2 PINE,
   `.p2m2` playback, comparison runner (34 tests). Ghidra GUI analysis and the native playtest are
   still open (need the user's desktop).
-- **Wave 1 is mid-cycle**: writer output for 12 functions is committed on `wave-1` as
-  *unverified*. Resume at step 4 (verify). `RiderSpinSub_HandleInput` attempt 1 failed (brace
+- **Wave 1 is mid-cycle**: writer output for 12 functions (~10.4k lines, $1.67 total, ~$0.14 each)
+  is committed on `wave-1` (local only) as *unverified*. Resume at step 4 (verify). `RiderSpinSub_HandleInput` attempt 1 failed (brace
   mismatch, no test); its feedback is in `out/wave1/fb-RiderSpinSub_HandleInput-1.txt`.
 - **`upstream-pr/state-trace`** is ready and verified on its own (the `SSX3_STATE_TRACE` hook alone,
   cut from `main`: build OK, RAM gate identical, `state_trace` tests 2/2). Worktree
   `~/Projects/ssx3-port-pr`; PR text in `docs/local/pr-state-trace.md`. Not pushed; waiting for the
   user's yes to push it and open the PR.
-- Budget: $50/month OpenRouter cap; first function cost $0.15 (~594k input tokens), so watch cost
+- Budget: $50/month OpenRouter cap; wave 1 writing cost $1.67 for 12 functions, so watch cost
   per passed function after wave 1 and apply the switching rule in `orchestrator.md`.
 
 ## Open findings
