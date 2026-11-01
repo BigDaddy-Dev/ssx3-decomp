@@ -43,6 +43,7 @@ RACE_STARTS = HERE / "race_start.json"
 HISTORY = HERE / "history.jsonl"
 DEFAULT_BIN = REPO / "target" / "release" / "ssx3-headless"
 DEFAULT_LOCK = Path.home() / "Projects" / "ssx3-port" / "target" / ".heavy.lock"
+FRESH_RACE = 120  # sample-pcsx2 starts on a race whose counter is still below this
 
 
 def scenario(name):
@@ -125,12 +126,14 @@ def sample_pcsx2(name, out, race_frames, idle_s=5.0):
     s.check_game()
     fields = load_fields(FIELDS)
     print("waiting for the race (start the .p2m2 playback in PCSX2)...", file=sys.stderr)
-    while True:
+    while True:  # a race from an earlier playback can still be in memory: wait for a fresh one
         try:
             live = resolve(fields, lambda a: s.pine.read(a, 4))
-            break
+            if s.sample(live[:1])["frame"][0] <= FRESH_RACE:
+                break
         except ValueError:
-            time.sleep(0.2)
+            pass
+        time.sleep(0.1)
     n, last, last_t = 0, None, time.time()
     with open(out, "w") as f:
         while time.time() - last_t < idle_s:
