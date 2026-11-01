@@ -1,0 +1,118 @@
+# Game state compared between the native build and PCSX2 (tools/pcsx2-diff).
+# Addresses: upstream's named offsets (crates/ssx3-game/src/ai.rs, game/ai/rider.rs) and
+# docs/local/l3-spike.md. `chain` fields start at App (gp - 0x848 = 0x4a28a8) and go
+# App -> +0x84 GameModule -> +0xc AI. Valid only during a race (the chain is null elsewhere).
+
+[[field]]  # AI+8: the race frame counter AI_GetFrameCounter (0x1298c8) returns; +1 per frame
+name = "frame"
+chain = [0x4a28a8, 0x84, 0xc]
+addr = 0x8
+type = "u32"
+
+[[field]]  # ai_mgr::RIDER_COUNT
+name = "rider_count"
+chain = [0x4a28a8, 0x84, 0xc]
+addr = 0x78
+type = "u32"
+
+[[field]]  # ai_mgr::PLAYER_COUNT
+name = "player_count"
+chain = [0x4a28a8, 0x84, 0xc]
+addr = 0x7c
+type = "u32"
+
+[[field]]  # ai_mgr::RIDERS[0] -> rider::POSITION (vec4, xyz compared)
+name = "rider0_pos"
+chain = [0x4a28a8, 0x84, 0xc, 0x28]
+addr = 0x110
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[0] -> rider::VELOCITY
+name = "rider0_vel"
+chain = [0x4a28a8, 0x84, 0xc, 0x28]
+addr = 0x1e0
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[1] -> rider::POSITION (vec4, xyz compared)
+name = "rider1_pos"
+chain = [0x4a28a8, 0x84, 0xc, 0x2c]
+addr = 0x110
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[1] -> rider::VELOCITY
+name = "rider1_vel"
+chain = [0x4a28a8, 0x84, 0xc, 0x2c]
+addr = 0x1e0
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[2] -> rider::POSITION (vec4, xyz compared)
+name = "rider2_pos"
+chain = [0x4a28a8, 0x84, 0xc, 0x30]
+addr = 0x110
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[2] -> rider::VELOCITY
+name = "rider2_vel"
+chain = [0x4a28a8, 0x84, 0xc, 0x30]
+addr = 0x1e0
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[3] -> rider::POSITION (vec4, xyz compared)
+name = "rider3_pos"
+chain = [0x4a28a8, 0x84, 0xc, 0x34]
+addr = 0x110
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[3] -> rider::VELOCITY
+name = "rider3_vel"
+chain = [0x4a28a8, 0x84, 0xc, 0x34]
+addr = 0x1e0
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[4] -> rider::POSITION (vec4, xyz compared)
+name = "rider4_pos"
+chain = [0x4a28a8, 0x84, 0xc, 0x38]
+addr = 0x110
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[4] -> rider::VELOCITY
+name = "rider4_vel"
+chain = [0x4a28a8, 0x84, 0xc, 0x38]
+addr = 0x1e0
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[5] -> rider::POSITION (vec4, xyz compared)
+name = "rider5_pos"
+chain = [0x4a28a8, 0x84, 0xc, 0x3c]
+addr = 0x110
+type = "f32"
+count = 3
+tol = 0.5
+
+[[field]]  # ai_mgr::RIDERS[5] -> rider::VELOCITY
+name = "rider5_vel"
+chain = [0x4a28a8, 0x84, 0xc, 0x3c]
+addr = 0x1e0
+type = "f32"
+count = 3
+tol = 0.5

@@ -58,6 +58,14 @@ upstream**; don't use these to line frames up.
 Without `SSX3_ISO` the headless runner can't find the disc and idles at boot (RAM never changes). Always
 `. ./.envrc` first.
 
+Checked in PCSX2 during a Snow Jam race (user-driven): the race counter rose +60 per second, i.e. +1 per
+frame, and `fields.toml` resolved and sampled live in one PINE batch (frame 5070, 6 riders, 1 player).
+Natively (`SSX3_EVENT=BRA2`, chains resolved from a RAM dump) the same fields trace correctly.
+
 ## Decision
 
-Pending.
+- **Races: `MODE = per-frame`**, lined up by the race frame counter (`frame` in `fields.toml`).
+  Pointer-chain fields are resolved once per side at race start (PINE live; native from a RAM dump at a
+  frame inside the race), then sampled as plain addresses.
+- **Menus: `MODE = end-of-run`** until a shared always-on counter is found (see the 10× question above).
+- `.p2m2` playback (step 2) still needs one manual load in PCSX2 (Tools → Input Recording → Play).
