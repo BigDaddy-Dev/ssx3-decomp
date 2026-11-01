@@ -6,7 +6,7 @@
 
 Exit 0: the module file was copied back into this tree; prints JSON {fn, model, session, attempt,
 report, diff_path}. Exit 3: budget blocked (opencode never ran). Exit 4: the writer touched more than
-its module (nothing copied back). Exit 5: opencode failed or timed out. Every call is in the ledger;
+its module (nothing copied back). Exit 5: opencode failed or timed out. Exit 6: SSX3_OPENROUTER_API_KEY unset. Every call is in the ledger;
 the orchestrator records the test result later with `ledger.py mark`.
 """
 import argparse
@@ -27,6 +27,7 @@ import ledger  # noqa: E402
 
 DEFAULT_MODELS = ["openrouter/qwen/qwen3-coder", "openrouter/deepseek/deepseek-chat"]
 TIMEOUT_S = 15 * 60
+KEY_ENV = "SSX3_OPENROUTER_API_KEY"  # this project's own OpenRouter key (set in .envrc, never committed)
 
 
 @dataclass
@@ -76,6 +77,7 @@ def writer_config(module):
     allow = lambda a, r="*": {"action": a, "resource": r, "effect": "allow"}  # noqa: E731
     return {
         "$schema": "https://opencode.ai/config.json",
+        "providers": {"openrouter": {"env": [KEY_ENV]}},
         "agents": {"ssx3-writer": {
             "mode": "primary",
             "description": "SSX 3 port writer: edits one module file, never builds",
@@ -113,6 +115,10 @@ def main(argv, repo=None):
     repo = Path(repo or _git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
     ledger_path = Path(os.environ.get("SSX3_AGENT_LEDGER", HERE / "ledger.jsonl"))
     now = datetime.now(timezone.utc)
+
+    if a.model.startswith("openrouter/") and not os.environ.get(KEY_ENV):
+        print(f"write-one: {KEY_ENV} is not set; put the project's OpenRouter key in .envrc", file=sys.stderr)
+        return 6
 
     ok, msg = ledger.budget_ok(ledger.read(ledger_path), now, float(os.environ.get("SSX3_AGENT_BUDGET_USD", "50")))
     if not ok:
@@ -155,7 +161,10 @@ def main(argv, repo=None):
             cmd += ["--session", a.session]
         cmd.append(prompt)
         try:
-            p = subprocess.run(cmd, cwd=wt, capture_output=True, text=True, timeout=TIMEOUT_S)
+            env = dict(os.environ)
+            if os.environ.get(KEY_ENV):
+                env["OPENROUTER_API_KEY"] = os.environ[KEY_ENV]
+            p = subprocess.run(cmd, cwd=wt, env=env, capture_output=True, text=True, timeout=TIMEOUT_S)
             stdout, failed = p.stdout, p.returncode != 0
         except subprocess.TimeoutExpired as e:
             stdout, failed = (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""), True

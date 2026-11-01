@@ -53,6 +53,7 @@ def repo(tmp_path, monkeypatch):
     monkeypatch.setenv("SSX3_AGENT_LEDGER", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("SSX3_AGENT_SCRATCH", str(tmp_path / "scratch"))
     monkeypatch.setenv("SSX3_AGENT_BUDGET_USD", "50")
+    monkeypatch.setenv("SSX3_OPENROUTER_API_KEY", "sk-or-test")
     return r
 
 
@@ -134,3 +135,13 @@ def test_writer_config_limits_edit_to_module():
     edits = [r for r in rules if r["action"] == "edit" and r["effect"] == "allow"]
     assert edits == [{"action": "edit", "resource": MOD, "effect": "allow"}]
     assert rules[0] == {"action": "*", "resource": "*", "effect": "deny"}
+
+
+def test_missing_project_key_exits_6(repo, monkeypatch, tmp_path):
+    monkeypatch.delenv("SSX3_OPENROUTER_API_KEY")
+    assert run(repo) == 6
+    assert not (tmp_path / "args.json").exists()
+
+
+def test_writer_config_reads_project_key():
+    assert dispatch.writer_config(MOD)["providers"]["openrouter"]["env"] == ["SSX3_OPENROUTER_API_KEY"]
