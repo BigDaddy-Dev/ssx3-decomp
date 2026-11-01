@@ -34,9 +34,27 @@ The 18 bytes for one pad:
 `~(mask >> 8) & 0xff`. The bit orders line up exactly. Pressure is `0xff` when held and `0` otherwise;
 analog sticks are neutral at `0x7f`.
 
-## 2. Playback from the command line
+## 2. Playback (2026-11-01)
 
-Pending (needs PCSX2 running with the disc).
+PCSX2 has **no command-line option** for input playback (`-help` lists none). It works from the GUI:
+Tools → Input Recording → Play, then System → Pause to resume (the file dialog pauses emulation). Driven
+remotely with `xdotool` on the KDE/X11 session (`DISPLAY=:0`, env taken from `plasmashell`); PCSX2
+restarted with `-nofullscreen` so the menu bar is reachable.
+
+Our generated `out/p2m2/p1_race_snow_jam.p2m2` (upstream's `p1_race_snow_jam` input script, 7950 frames)
+**drove the game from a cold boot through the menus into a Snow Jam race** with nobody touching the
+controller, and PINE kept working throughout. Race counter first seen ~100 s in; at the end of playback
+(frame 7950, auto-paused) the race frame was **3498**.
+
+**First real comparison.** The same script natively (`ssx3-headless 7950`) reached race frame **4398**:
+the native race starts ~900 frames (~15 s) earlier (native file loads are instant; PCSX2 emulates disc
+timing). Lined up by race frame 3498, every rider's position and velocity differ, because the gameplay
+presses are timed from boot and so land on different race frames on each side.
+
+**Consequence for the runner (Task 8):** split each script into menu presses (boot-relative) and in-race
+presses (race-relative). Measure each side's race-start boot frame (one native run; one PCSX2 playback),
+then shift the in-race presses per side so they hit the same race frames. Both sides are deterministic, so
+the start frames are stable.
 
 ## 3. PINE and the frame counter (2026-11-01)
 

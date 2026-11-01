@@ -34,3 +34,7 @@ One heavy process at a time (a build or a game run).
 - 2026-11-01 (later): toolchain, pre-commit guard, ledger, guard, dispatcher (real run OK), trace
   hook (gate green), pcsx2-diff core, Ghidra/PINE installs. Next: user GUI checks (Task 2), playtest
   (Task 4), L3 feasibility steps 2–4 (Task 5), then fields.toml, runner, runbook and first wave.
+- 2026-11-01 (later still): PINE via /proc/<pid>/root socket; race frame counter + fields.toml
+  (pointer chains); .p2m2 playback drove PCSX2 boot → Snow Jam race; first native-vs-PCSX2 comparison
+  ran end to end. Native race starts ~900 frames earlier, so in-race inputs must be race-relative
+  (next: Task 8 runner). Open: always-on counters tick 10× per frame natively.
