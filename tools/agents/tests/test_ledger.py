@@ -58,3 +58,17 @@ def test_status_pass_rate_per_model():
     assert "openrouter/qwen/qwen3-coder" in out and "50%" in out
     assert "openrouter/deepseek/deepseek-chat" in out and "100%" in out
     assert "$0.30" in out
+
+
+def test_mark_sets_result_of_latest_pending(tmp_path):
+    p = tmp_path / "ledger.jsonl"
+    ledger.append(p, e(0.1, result="pending", attempt=1))
+    ledger.append(p, e(0.1, result="pending", attempt=2))
+    assert ledger.mark(p, "f_00100000", 2, "pass") is True
+    assert [x.result for x in ledger.read(p)] == ["pending", "pass"]
+
+
+def test_mark_unknown_returns_false(tmp_path):
+    p = tmp_path / "ledger.jsonl"
+    ledger.append(p, e(0.1, result="pending"))
+    assert ledger.mark(p, "f_deadbeef", 1, "fail") is False

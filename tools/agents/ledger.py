@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Cost ledger for the writer agents (one JSON line per model call).
 
-  python3 tools/agents/ledger.py status     # spend this month, pass rates, cost per function
+  python3 tools/agents/ledger.py status                    # spend, pass rates, cost per function
+  python3 tools/agents/ledger.py mark FN ATTEMPT pass|fail # the orchestrator's test result
 
 Only OpenRouter spend counts toward the monthly cap (SSX3_AGENT_BUDGET_USD, default 50);
 Claude escalations are logged with provider "claude" and run on the user's Claude plan.
@@ -44,6 +45,17 @@ def read(path):
     return [Entry(**json.loads(line)) for line in p.read_text().splitlines() if line.strip()]
 
 
+def mark(path, fn, attempt, result):
+    """Record the orchestrator's test result on the latest pending entry for fn/attempt."""
+    rows = read(path)
+    for x in reversed(rows):
+        if x.fn == fn and x.attempt == attempt and x.result == "pending":
+            x.result = result
+            Path(path).write_text("".join(json.dumps(asdict(r)) + "\n" for r in rows))
+            return True
+    return False
+
+
 def _this_month(entries, now):
     for x in entries:
         t = datetime.fromisoformat(x.ts).astimezone(timezone.utc)
@@ -81,9 +93,13 @@ def status(entries, now):
 
 
 def main(argv):
+    path = os.environ.get("SSX3_AGENT_LEDGER", DEFAULT_PATH)
+    if argv[:1] == ["mark"] and len(argv) == 4 and argv[3] in ("pass", "fail"):
+        if not mark(path, argv[1], int(argv[2]), argv[3]):
+            sys.exit(f"ledger: no pending entry for {argv[1]} attempt {argv[2]}")
+        return
     if argv[:1] != ["status"]:
         sys.exit(__doc__)
-    path = os.environ.get("SSX3_AGENT_LEDGER", DEFAULT_PATH)
     print(status(read(path), datetime.now(timezone.utc)))
     cap = float(os.environ.get("SSX3_AGENT_BUDGET_USD", "50"))
     print(budget_ok(read(path), datetime.now(timezone.utc), cap)[1])
