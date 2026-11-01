@@ -122,6 +122,10 @@ fn main() {
         Some((a.parse().ok()?, b.parse().ok()?))
     });
     let mut bench_ms: Vec<f64> = Vec::new();
+    // SSX3_STATE_TRACE=path: after every SSX3_STATE_EVERY-th frame (default 1), append a record
+    // of `u32 LE frame` then the bytes of each SSX3_STATE_RANGES entry (`0xADDR+LEN,...`, EE
+    // physical addresses) from guest RAM. tools/pcsx2-diff compares these with PCSX2 over PINE.
+    let mut state_trace = state_trace_open();
     for f in 1..=frames {
         let frame_start = std::time::Instant::now();
         if let (Some((from, _)), Some(g)) = (bench, &gfx) {
@@ -175,6 +179,19 @@ fn main() {
         }
         let alive = ssx3_ps2::machine::run_frame(&mut c);
         ssx3_ee_rt::prof::frame(f);
+        if let Some((out, ranges, every)) = &mut state_trace {
+            if f % *every == 0 {
+                let mut rec = (f as u32).to_le_bytes().to_vec();
+                for &(addr, len) in ranges.iter() {
+                    let a = addr & 0x01ff_ffff;
+                    rec.extend_from_slice(&c.bus.ram[a..a + len]);
+                }
+                if let Err(e) = std::io::Write::write_all(out, &rec) {
+                    eprintln!("SSX3_STATE_TRACE: {e}");
+                    state_trace = None;
+                }
+            }
+        }
         if let Some((from, to)) = bench {
             if (from..=to).contains(&f) {
                 bench_ms.push(frame_start.elapsed().as_secs_f64() * 1000.0);
@@ -560,5 +577,33 @@ fn main() {
             "sio: {}",
             String::from_utf8_lossy(&ssx3_ps2::m!(c).hw.sio_line)
         );
+    }
+}
+
+/// SSX3_STATE_TRACE / SSX3_STATE_RANGES / SSX3_STATE_EVERY (see the frame loop).
+fn state_trace_open() -> Option<(std::fs::File, Vec<(usize, usize)>, u64)> {
+    let path = std::env::var("SSX3_STATE_TRACE").ok()?;
+    let spec = std::env::var("SSX3_STATE_RANGES").unwrap_or_default();
+    let mut ranges = Vec::new();
+    for item in spec.split(',').filter(|s| !s.is_empty()) {
+        let parsed = item.split_once('+').and_then(|(a, l)| {
+            let a = usize::from_str_radix(a.trim_start_matches("0x"), 16).ok()?;
+            Some((a, l.parse::<usize>().ok()?))
+        });
+        match parsed {
+            Some((a, l)) if (a & 0x01ff_ffff) + l <= 32 << 20 => ranges.push((a, l)),
+            _ => {
+                eprintln!("SSX3_STATE_RANGES: bad entry {item:?} (want 0xADDR+LEN inside 32 MiB)");
+                return None;
+            }
+        }
+    }
+    let every = std::env::var("SSX3_STATE_EVERY").ok().and_then(|v| v.parse().ok()).filter(|&n| n > 0).unwrap_or(1);
+    match std::fs::File::create(&path) {
+        Ok(f) => Some((f, ranges, every)),
+        Err(e) => {
+            eprintln!("SSX3_STATE_TRACE {path}: {e}");
+            None
+        }
     }
 }
