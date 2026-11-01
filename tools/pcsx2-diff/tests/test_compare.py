@@ -27,3 +27,10 @@ def test_missing_frames_skipped():
     nat = [s(1), s(2, score=99), s(3)]
     pcs = [s(1), s(3)]
     assert first_divergence(nat, pcs, FS) is None
+
+
+def test_after_last_reset_drops_the_intro_count():
+    from l3.compare import after_last_reset
+    s = [{"frame": [f]} for f in [0, 1, 2, 67, 0, 1, 2]]
+    assert [x["frame"][0] for x in after_last_reset(s)] == [0, 1, 2]
+    assert after_last_reset([]) == []

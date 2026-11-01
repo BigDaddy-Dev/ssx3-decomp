@@ -28,3 +28,13 @@ def first_divergence(native, pcsx2, fields):
         if bad:
             return Divergence(mine["frame"][0], bad)
     return None
+
+
+def after_last_reset(samples):
+    """The race counter counts through the pre-race intro, then restarts at 0 (seen in PCSX2 at 67):
+    keep the samples from the last restart on, so each race frame appears once."""
+    start = 0
+    for i in range(1, len(samples)):
+        if samples[i]["frame"][0] < samples[i - 1]["frame"][0]:
+            start = i
+    return samples[start:]

@@ -30,7 +30,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from l3.compare import first_divergence  # noqa: E402
+from l3.compare import after_last_reset, first_divergence  # noqa: E402
 from l3.fields import load_fields, ranges, resolve  # noqa: E402
 from l3.inputs import scenario_to_p2m2  # noqa: E402
 from l3.native import dump_reader, race_start, read_trace  # noqa: E402
@@ -136,7 +136,8 @@ def sample_pcsx2(name, out, race_frames, idle_s=5.0):
         time.sleep(0.1)
     n, last, last_t = 0, None, time.time()
     with open(out, "w") as f:
-        while time.time() - last_t < idle_s:
+        # The counter holds at 0 through the pre-race intro: only time out once it has moved.
+        while not last or time.time() - last_t < idle_s:
             row = s.sample(live)
             fr = row["frame"][0]
             if fr != last:
@@ -169,9 +170,11 @@ def compare(name, plan, binary, pcsx2_samples):
     trace = d / "native-trace.bin"
     run_native(binary, plan["native_frames"], script, plan["card"], d,
                {"SSX3_STATE_TRACE": str(trace), "SSX3_STATE_RANGES": ranges(live), "SSX3_STATE_EVERY": "1"})
-    native = [r for r in read_trace(trace, live) if r["_sample_frame"] > rs]  # before the race: stale
+    native = after_last_reset([r for r in read_trace(trace, live) if r["_sample_frame"] > rs])
     trace.unlink()
-    pcsx2 = [json.loads(l) for l in Path(pcsx2_samples).read_text().splitlines() if l.strip()]
+    with open(d / "native-samples.jsonl", "w") as f:  # same shape as pcsx2-samples.jsonl, for digging
+        f.writelines(json.dumps(r) + "\n" for r in native)
+    pcsx2 = after_last_reset([json.loads(l) for l in Path(pcsx2_samples).read_text().splitlines() if l.strip()])
     div = first_divergence(native, pcsx2, live)
     commit = git_commit()
     rd = d / commit
