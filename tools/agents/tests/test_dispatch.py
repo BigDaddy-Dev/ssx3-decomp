@@ -157,7 +157,7 @@ def test_isolated_data_dir_and_project_key(repo, tmp_path):
     run(repo)
     env = json.loads((tmp_path / "args.json.env").read_text())
     assert env["OPENROUTER_API_KEY"] == "sk-or-test"
-    assert env["XDG_DATA_HOME"] == str(tmp_path / "scratch" / "opencode-data")
+    assert env["XDG_DATA_HOME"] == str(tmp_path / "scratch" / "opencode-data" / FN)
 
 
 def test_retry_cost_is_delta_of_session_total(repo, monkeypatch, tmp_path):
@@ -201,3 +201,11 @@ def test_clone_with_tracked_generated_metadata(repo, tmp_path):
     assert run(repo) == 0
     env = json.loads((tmp_path / "args.json.env").read_text())
     assert env["generated_shard"] is True
+
+
+def test_failure_before_any_session_costs_nothing(repo, monkeypatch, tmp_path):
+    # No session means no model call: a known $0, which must not stop the other writers.
+    monkeypatch.setenv("FAKE_OPENCODE", "fail_start")
+    assert run(repo) == 5
+    [e] = ledger.read(tmp_path / "ledger.jsonl")
+    assert e.result == "error" and e.session == "" and e.cost_usd == 0.0

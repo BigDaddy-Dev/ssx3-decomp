@@ -178,7 +178,9 @@ def main(argv, repo=None):
     env = dict(os.environ)
     # A data dir of our own: opencode prefers its stored login over OPENROUTER_API_KEY, and the
     # project key must be the only credential a writer can spend.
-    env["XDG_DATA_HOME"] = str(scratch / "opencode-data")
+    # One per function: parallel standalone servers sharing a data dir fail to start, and a retry
+    # (--session) must find its session again.
+    env["XDG_DATA_HOME"] = str(scratch / "opencode-data" / a.fn)
     if os.environ.get(KEY_ENV):
         env["OPENROUTER_API_KEY"] = os.environ[KEY_ENV]
 
@@ -186,6 +188,8 @@ def main(argv, repo=None):
         sid = usage.session_id or a.session or ""
         cost, tin, tout = None, usage.tokens_in, usage.tokens_out
         total = session_cost(opencode, sid, env) if sid else None
+        if not sid:  # opencode never started a session, so no model call was made
+            cost = 0.0
         if total is not None:
             before = sum(x.cost_usd or 0.0 for x in ledger.read(ledger_path) if sid and x.session == sid)
             cost, tin, tout = round(max(total[0] - before, 0.0), 10), total[1], total[2]

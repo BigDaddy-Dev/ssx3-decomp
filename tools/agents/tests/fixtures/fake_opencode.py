@@ -27,6 +27,9 @@ if mode in ("edit", "edit_two"):
     module.write_text(module.read_text() + "// ported\n")
 if mode == "edit_two":
     Path("overrides.txt").write_text("0x100000\n")
+if mode == "fail_start":  # the standalone server never came up: no events, no session
+    print("Error: Standalone server exited before reporting readiness", file=sys.stderr)
+    sys.exit(1)
 if mode == "fail":
     print("\n".join(lines[:3]))
     sys.exit(1)
