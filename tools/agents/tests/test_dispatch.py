@@ -188,3 +188,16 @@ def test_pwd_points_at_clone(repo, tmp_path):
     # opencode takes its project directory from $PWD, not the process cwd.
     run(repo)
     assert json.loads((tmp_path / "args.json.env").read_text())["pwd_matches_cwd"] is True
+
+
+def test_clone_with_tracked_generated_metadata(repo, tmp_path):
+    # Upstream tracks a few small files in generated/ (functions.tsv, ...) but not the shards, so
+    # a checkout already has a generated/ directory: link the missing shards into it.
+    (repo / "generated" / "functions.tsv").write_text("addr\tname\n")
+    git(repo, "add", "-f", "generated/functions.tsv")
+    git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "track metadata")
+    (repo / "generated" / "ee").mkdir()
+    (repo / "generated" / "ee" / "s00.rs").write_text("// shard\n")
+    assert run(repo) == 0
+    env = json.loads((tmp_path / "args.json.env").read_text())
+    assert env["generated_shard"] is True

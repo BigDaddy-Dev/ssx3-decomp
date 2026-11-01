@@ -161,9 +161,18 @@ def main(argv, repo=None):
     _git(scratch, "clone", "-q", "--shared", "--no-checkout", str(repo), str(wt))
     _git(wt, "checkout", "-q", "--detach", head)
     if (repo / "generated").is_dir():  # read-only use; edit permission covers the module only
-        (wt / "generated").symlink_to(repo / "generated", target_is_directory=True)
+        # Link what the checkout lacks: all of generated/, or (when upstream tracks a few metadata
+        # files there) just the untracked entries such as the ee/ shards. A symlink is a file to
+        # git, so exclude each link by exact path (/x/ would not match it).
+        if (wt / "generated").exists():
+            links = [(wt / "generated" / p.name, p) for p in (repo / "generated").iterdir()
+                     if not (wt / "generated" / p.name).exists()]
+        else:
+            links = [(wt / "generated", repo / "generated")]
         with open(wt / ".git" / "info" / "exclude", "a") as f:
-            f.write("/generated\n")  # a symlink is a file to git, so /generated/ doesn't match it
+            for link, target in links:
+                link.symlink_to(target, target_is_directory=target.is_dir())
+                f.write(f"/{link.relative_to(wt).as_posix()}\n")
 
     opencode = os.environ.get("OPENCODE_BIN", "opencode")
     env = dict(os.environ)

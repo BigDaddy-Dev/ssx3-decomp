@@ -19,6 +19,7 @@ Path(os.environ["FAKE_ARGS_OUT"] + ".env").write_text(json.dumps(
     {**{k: os.environ.get(k) for k in ("XDG_DATA_HOME", "OPENROUTER_API_KEY")},
      "git_is_dir": Path(".git").is_dir(), "has_config": Path("opencode.json").exists(),
      "generated_link": Path("generated").is_symlink(),
+     "generated_shard": Path("generated/ee/s00.rs").is_file(),
      "pwd_matches_cwd": os.environ.get("PWD") == os.getcwd()}))
 lines = FIXTURE.read_text().splitlines()
 module = Path(os.environ["FAKE_MODULE"])
