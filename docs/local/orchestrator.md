@@ -9,15 +9,17 @@ adds the local plumbing.
 - One heavy process at a time: wrap every cargo build/test and game run in
   `flock target/.heavy.lock …` (another agent may share the machine).
 - `python3 tools/agents/ledger.py status` must say the budget is OK.
-- Work on a local `wave-N` branch. Upstream PRs are cut later onto `upstream-pr/wave-N` by
-  cherry-picking only the port commits (no `docs/local`, no `tools/agents`, no `tools/pcsx2-diff`).
+- Branches and merge rules: see `HANDOVER.md`. In short: `wave-N` from `tooling`; upstream PRs are
+  cut onto `upstream-pr/wave-N` from `main` with only the port commits (no `docs/local`, no
+  `tools/agents`, no `tools/pcsx2-diff`); `main` only fast-forwards from upstream.
 
 ## The loop (upstream steps, with the three changes)
 
-1. **Pick** as upstream says: a fresh profile
+1. **Pick** 12 functions (4 lanes × 3) as upstream says: a fresh profile
    (`CARGO_TARGET_DIR=target-prof cargo build --profile game -p ssx3 --bin ssx3-headless --features callprof`,
    then a race replay with `SSX3_CALLPROF=<out>:<from>:<to>`), `tools/pick_wave.py`, dossiers with
-   `tools/refdossier2.py`. Create the staging module `crates/ssx3-game/src/ocM.rs` (the empty `OVERRIDES`
+   `tools/refdossier2.py` (`pick_wave.py EDGES OUTDIR N MOD` — N is the wave number, it writes 50 per
+   module; take the top 12 and split them round-robin into lanes). Create the staging module `crates/ssx3-game/src/ocM.rs` (the empty `OVERRIDES`
    skeleton from the worker guide) and wire it: `ocM = []` in `[features]` and the `packages` list of
    `crates/ssx3-game/Cargo.toml`, `#[cfg(feature = "ocM")] pub mod ocM;` and its `OVERRIDES` extend in
    `lib.rs`. Commit the skeleton so writer clones see it.
@@ -49,3 +51,11 @@ adds the local plumbing.
 
 An OpenRouter call with an unknown cost (`cost_usd: null`) stops all writers. Look the session up on the
 OpenRouter activity page (project key's account), put the real cost into that ledger line, and continue.
+
+## Closing a wave
+
+1. `ledger.py status` → wave numbers into `STATE.md` (passed / skipped / cost per passed function).
+2. Tooling fixes made on `wave-N` → `git cherry-pick` onto `tooling`.
+3. `git switch -c upstream-pr/wave-N main` and cherry-pick only the installed-and-reorganised port
+   commits; build, test and gate on that branch; draft the PR text in `docs/local/`.
+4. Ask the user before pushing it or opening the PR.
