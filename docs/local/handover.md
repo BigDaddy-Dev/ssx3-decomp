@@ -76,7 +76,9 @@ Heavy processes (cargo build/test, game runs) always go through `flock target/.h
 ## Naming
 
 Follow upstream: lowercase kebab-case for docs and tool folders (`docs/local/state.md`,
-`tools/pcsx2-diff/`), snake_case for Python modules; only `README.md`/`AGENTS.md` are uppercase.
+`tools/pcsx2-diff/`), snake_case for Python modules; only `README.md`/`AGENTS.md` are uppercase. Staging modules use upstream's `ocN` convention
+(next free number; upstream's last was `oc200`): they're temporary, `reorg_modules.py` moves the
+ported functions into the source tree and deletes them, so no `ocN` name reaches a PR.
 
 ## Working with the user
 
