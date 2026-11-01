@@ -30,7 +30,8 @@ class Entry:
     tokens_out: int
     cost_usd: float | None
     attempt: int
-    result: str  # "pass" | "fail" | "error" | "skipped"
+    result: str  # "pending" | "pass" | "fail" | "rejected" | "error" | "skipped"
+    session: str = ""  # opencode session id (retries continue the same session)
 
 
 def append(path, entry):

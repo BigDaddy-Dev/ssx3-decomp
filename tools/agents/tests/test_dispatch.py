@@ -40,6 +40,9 @@ def repo(tmp_path, monkeypatch):
     (r / "AGENTS.md").write_text(AGENTS_MD)
     (r / "overrides.txt").write_text("")
     (r / "docs/investigation/phase2-worker-guide.md").write_text("guide\n")
+    (r / ".gitignore").write_text("/generated/\n")
+    (r / "generated").mkdir()
+    (r / "generated" / "ee.rs").write_text("// generated\n")
     git(r, "init", "-q")
     git(r, "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A")
     git(r, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "base")
@@ -145,3 +148,43 @@ def test_missing_project_key_exits_6(repo, monkeypatch, tmp_path):
 
 def test_writer_config_reads_project_key():
     assert dispatch.writer_config(MOD)["providers"]["openrouter"]["env"] == ["SSX3_OPENROUTER_API_KEY"]
+
+
+SES = "ses_e6b310f99ffe3Fax0s97iI1K6M"
+
+
+def test_isolated_data_dir_and_project_key(repo, tmp_path):
+    run(repo)
+    env = json.loads((tmp_path / "args.json.env").read_text())
+    assert env["OPENROUTER_API_KEY"] == "sk-or-test"
+    assert env["XDG_DATA_HOME"] == str(tmp_path / "scratch" / "opencode-data")
+
+
+def test_retry_cost_is_delta_of_session_total(repo, monkeypatch, tmp_path):
+    now = datetime.now(timezone.utc).isoformat()
+    ledger.append(tmp_path / "ledger.jsonl", ledger.Entry(now, FN, "wave1", "openrouter", "m", 1, 1, 0.001, 1,
+                                                          "fail", session=SES))
+    monkeypatch.setenv("FAKE_COST", "0.003")
+    assert run(repo, "--session", SES, "--attempt", "2") == 0
+    last = ledger.read(tmp_path / "ledger.jsonl")[-1]
+    assert last.session == SES and last.cost_usd == pytest.approx(0.002)
+
+
+def test_export_failure_gives_unknown_cost(repo, monkeypatch, tmp_path):
+    monkeypatch.setenv("FAKE_EXPORT", "fail")
+    run(repo)
+    assert ledger.read(tmp_path / "ledger.jsonl")[-1].cost_usd is None
+
+
+def test_writer_runs_in_standalone_clone(repo, tmp_path):
+    # opencode resolves a git worktree to the main repo (config and edits would land there).
+    run(repo)
+    env = json.loads((tmp_path / "args.json.env").read_text())
+    assert env["git_is_dir"] is True and env["has_config"] is True
+    assert env["generated_link"] is True
+
+
+def test_pwd_points_at_clone(repo, tmp_path):
+    # opencode takes its project directory from $PWD, not the process cwd.
+    run(repo)
+    assert json.loads((tmp_path / "args.json.env").read_text())["pwd_matches_cwd"] is True

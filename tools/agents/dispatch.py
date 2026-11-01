@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one writer (opencode + an OpenRouter model) on one function, in a scratch worktree.
+"""Run one writer (opencode + an OpenRouter model) on one function, in a scratch clone.
 
   tools/agents/write-one.sh <fn> <wave> <module> --dossier refN/<fn>.md
                             [--model M] [--feedback FILE] [--session ID] [--attempt N]
@@ -25,7 +25,8 @@ sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
 import ledger  # noqa: E402
 
-DEFAULT_MODELS = ["openrouter/qwen/qwen3-coder", "openrouter/deepseek/deepseek-chat"]
+# The user's pick first; the order is revisited from measured pass rates (ledger.py status).
+DEFAULT_MODELS = ["openrouter/deepseek/deepseek-v4.1-flash-1017", "openrouter/qwen/qwen3-coder"]
 TIMEOUT_S = 15 * 60
 KEY_ENV = "SSX3_OPENROUTER_API_KEY"  # this project's own OpenRouter key (set in .envrc, never committed)
 
@@ -56,6 +57,23 @@ def parse_run_json(lines):
             tin += part.get("tokens", {}).get("input", 0)
             tout += part.get("tokens", {}).get("output", 0)
     return Usage(tin, tout, round(cost, 10) if steps else None, session, text.strip())
+
+
+def session_cost(opencode, sid, env):
+    """Cumulative (cost, tokens_in, tokens_out) of an opencode session, or None if it can't be read.
+
+    The run's own JSON omits the last step's usage, so the session export is the source of truth.
+    """
+    try:
+        p = subprocess.run([opencode, "session", "export", "--standalone", sid], env=env,
+                           capture_output=True, text=True, timeout=120)
+        info = json.loads(p.stdout)["info"] if p.returncode == 0 else None
+    except (subprocess.TimeoutExpired, ValueError, KeyError):
+        info = None
+    if not info or "cost" not in info:
+        return None
+    t = info.get("tokens", {})
+    return float(info["cost"]), t.get("input", 0), t.get("output", 0)
 
 
 def writer_rules(agents_md):
@@ -136,16 +154,35 @@ def main(argv, repo=None):
     scratch = Path(os.environ.get("SSX3_AGENT_SCRATCH", repo / ".agents-wt"))
     scratch.mkdir(parents=True, exist_ok=True)
     wt = scratch / f"wt-{a.fn}"
-    if wt.exists():
-        subprocess.run(["git", "-C", str(repo), "worktree", "remove", "--force", str(wt)], capture_output=True)
-        shutil.rmtree(wt, ignore_errors=True)
-    _git(repo, "worktree", "add", "--detach", str(wt), "HEAD")
+    # A standalone clone, not a git worktree: opencode resolves a worktree to the main repo, which
+    # would load the wrong config and let edits land in the orchestrator's tree.
+    shutil.rmtree(wt, ignore_errors=True)
+    head = _git(repo, "rev-parse", "HEAD").strip()
+    _git(scratch, "clone", "-q", "--shared", "--no-checkout", str(repo), str(wt))
+    _git(wt, "checkout", "-q", "--detach", head)
+    if (repo / "generated").is_dir():  # read-only use; edit permission covers the module only
+        (wt / "generated").symlink_to(repo / "generated", target_is_directory=True)
+        with open(wt / ".git" / "info" / "exclude", "a") as f:
+            f.write("/generated\n")  # a symlink is a file to git, so /generated/ doesn't match it
+
+    opencode = os.environ.get("OPENCODE_BIN", "opencode")
+    env = dict(os.environ)
+    # A data dir of our own: opencode prefers its stored login over OPENROUTER_API_KEY, and the
+    # project key must be the only credential a writer can spend.
+    env["XDG_DATA_HOME"] = str(scratch / "opencode-data")
+    if os.environ.get(KEY_ENV):
+        env["OPENROUTER_API_KEY"] = os.environ[KEY_ENV]
 
     def log(usage, result):
+        sid = usage.session_id or a.session or ""
+        cost, tin, tout = None, usage.tokens_in, usage.tokens_out
+        total = session_cost(opencode, sid, env) if sid else None
+        if total is not None:
+            before = sum(x.cost_usd or 0.0 for x in ledger.read(ledger_path) if sid and x.session == sid)
+            cost, tin, tout = round(max(total[0] - before, 0.0), 10), total[1], total[2]
         ledger.append(ledger_path, ledger.Entry(
             ts=now.isoformat(), fn=a.fn, wave=a.wave, provider=a.model.split("/")[0], model=a.model,
-            tokens_in=usage.tokens_in, tokens_out=usage.tokens_out, cost_usd=usage.cost_usd,
-            attempt=a.attempt, result=result))
+            tokens_in=tin, tokens_out=tout, cost_usd=cost, attempt=a.attempt, result=result, session=sid))
 
     try:
         for rel in (a.module, a.dossier):
@@ -155,23 +192,24 @@ def main(argv, repo=None):
         (wt / "opencode.json").write_text(json.dumps(writer_config(a.module), indent=1))
         _git(wt, "add", "-A", "-f", "--", *[p for p in (a.module, a.dossier, "opencode.json") if (wt / p).exists()])
 
-        cmd = [os.environ.get("OPENCODE_BIN", "opencode"), "run", "--standalone", "-m", a.model,
+        cmd = [opencode, "run", "--standalone", "-m", a.model,
                "--agent", "ssx3-writer", "--format", "json", "--auto", "--title", f"{a.wave} {a.fn}"]
         if a.session:
             cmd += ["--session", a.session]
         cmd.append(prompt)
         try:
-            env = dict(os.environ)
-            if os.environ.get(KEY_ENV):
-                env["OPENROUTER_API_KEY"] = os.environ[KEY_ENV]
-            p = subprocess.run(cmd, cwd=wt, env=env, capture_output=True, text=True, timeout=TIMEOUT_S)
+            # opencode resolves its project from $PWD, which cwd= alone leaves pointing at the caller.
+            p = subprocess.run(cmd, cwd=wt, env={**env, "PWD": str(wt)}, capture_output=True, text=True, timeout=TIMEOUT_S)
             stdout, failed = p.stdout, p.returncode != 0
+            (scratch / f"{a.fn}-attempt{a.attempt}.log").write_text(p.stderr or "")
         except subprocess.TimeoutExpired as e:
             stdout, failed = (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""), True
         usage = parse_run_json(stdout.splitlines())
         if failed:
             log(usage, "error")
-            print(f"write-one: opencode failed or timed out for {a.fn}", file=sys.stderr)
+            log_path = scratch / f"{a.fn}-attempt{a.attempt}.log"
+            tail = log_path.read_text()[-800:] if log_path.exists() else "(timed out)"
+            print(f"write-one: opencode failed or timed out for {a.fn}; log {log_path}:\n{tail}", file=sys.stderr)
             return 5
 
         problems = guard.check_diff(_changes(wt), a.module)
@@ -189,9 +227,7 @@ def main(argv, repo=None):
                           "report": usage.final_text, "diff_path": str(diff_path)}))
         return 0
     finally:
-        subprocess.run(["git", "-C", str(repo), "worktree", "remove", "--force", str(wt)], capture_output=True)
         shutil.rmtree(wt, ignore_errors=True)
-        subprocess.run(["git", "-C", str(repo), "worktree", "prune"], capture_output=True)
 
 
 if __name__ == "__main__":
