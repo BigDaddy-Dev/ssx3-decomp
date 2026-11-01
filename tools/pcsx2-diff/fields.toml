@@ -1,6 +1,6 @@
 # Game state compared between the native build and PCSX2 (tools/pcsx2-diff).
 # Addresses: upstream's named offsets (crates/ssx3-game/src/ai.rs, game/ai/rider.rs) and
-# docs/local/l3-spike.md. `chain` fields start at App (gp - 0x848 = 0x4a28a8) and go
+# docs/local/pcsx2-comparison.md. `chain` fields start at App (gp - 0x848 = 0x4a28a8) and go
 # App -> +0x84 GameModule -> +0xc AI. Valid only during a race (the chain is null elsewhere).
 
 [[field]]  # AI+8: the race frame counter AI_GetFrameCounter (0x1298c8) returns; +1 per frame

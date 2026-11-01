@@ -1,6 +1,6 @@
 # Handover: start here
 
-Read this first in a new session, then `STATE.md` (status, findings, log) and `orchestrator.md` (the
+Read this first in a new session, then `state.md` (status, findings, log) and `orchestrator.md` (the
 wave cycle in detail). Everything below was set up and verified on 2026-11-01.
 
 ## Where things are
@@ -14,7 +14,7 @@ wave cycle in detail). Everything below was set up and verified on 2026-11-01.
 | Writer cost ledger | `tools/agents/ledger.jsonl` (git-excluded); `python3 tools/agents/ledger.py status` |
 | Scratch for writers | `.agents-wt/` (clones, logs, diffs, one opencode data dir per function) |
 | Wave working files | `out/waveN/` (profile, lanes, dossiers, feedback) — git-excluded |
-| PCSX2 comparison | `tools/pcsx2-diff/run.py` (see `l3-spike.md`, `run.py --help`) |
+| PCSX2 comparison | `tools/pcsx2-diff/run.py` (see `pcsx2-comparison.md`, `run.py --help`) |
 | Ghidra + GhidraMCP | retro-vault `library/tools/ghidra/`; `.mcp.json` (git-excluded) |
 
 ## Branches and what gets merged (agreed 2026-11-01)
@@ -43,7 +43,7 @@ wave cycle in detail). Everything below was set up and verified on 2026-11-01.
    Claude subagent → skip with a note. `ledger.py mark` every result.
 5. **Install** `integrate_wave.py all` (gate must print "identical"), `reorg_modules.py`, gate again.
 6. **Compare** `run.py p1_race_snow_jam` (native side automated); PCSX2 side only when needed.
-7. **Close** ledger stats + `STATE.md`; tooling fixes → `tooling`; cut `upstream-pr/wave-N` with the
+7. **Close** ledger stats + `state.md`; tooling fixes → `tooling`; cut `upstream-pr/wave-N` with the
    port commits only; ask the user before opening the PR.
 
 Heavy processes (cargo build/test, game runs) always go through `flock target/.heavy.lock …` —
@@ -57,8 +57,10 @@ Heavy processes (cargo build/test, game runs) always go through `flock target/.h
 - **Wave 1 is mid-cycle**: writer output for 12 functions is committed on `wave-1` as
   *unverified*. Resume at step 4 (verify). `RiderSpinSub_HandleInput` attempt 1 failed (brace
   mismatch, no test); its feedback is in `out/wave1/fb-RiderSpinSub_HandleInput-1.txt`.
-- **`upstream-pr/state-trace`** is ready (the `SSX3_STATE_TRACE` hook alone, cut from `main`); PR
-  text in `docs/local/pr-state-trace.md`. Waiting for the user's yes to open it.
+- **`upstream-pr/state-trace`** is ready and verified on its own (the `SSX3_STATE_TRACE` hook alone,
+  cut from `main`: build OK, RAM gate identical, `state_trace` tests 2/2). Worktree
+  `~/Projects/ssx3-port-pr`; PR text in `docs/local/pr-state-trace.md`. Not pushed; waiting for the
+  user's yes to push it and open the PR.
 - Budget: $50/month OpenRouter cap; first function cost $0.15 (~594k input tokens), so watch cost
   per passed function after wave 1 and apply the switching rule in `orchestrator.md`.
 
@@ -70,6 +72,11 @@ Heavy processes (cargo build/test, game runs) always go through `flock target/.h
 - **10× timers:** always-on counters (`EA_TIMER_TICKS` 0x450dcc, `APPMAN_VSYNC` 0x4c9440, …) rise
   +1 per vsync in PCSX2 but +10 per headless frame natively. Likely related to the above; worth an
   upstream issue (only with the user's yes).
+
+## Naming
+
+Follow upstream: lowercase kebab-case for docs and tool folders (`docs/local/state.md`,
+`tools/pcsx2-diff/`), snake_case for Python modules; only `README.md`/`AGENTS.md` are uppercase.
 
 ## Working with the user
 

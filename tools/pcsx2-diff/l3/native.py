@@ -13,7 +13,7 @@ def dump_reader(ram):
 
 def race_start(read32, frame_field, end_frame):
     """Boot frame at which the race counter was 0, from a dump taken after `end_frame` frames
-    (the counter rises +1 per frame, docs/local/l3-spike.md)."""
+    (the counter rises +1 per frame, docs/local/pcsx2-comparison.md)."""
     (f,) = resolve([frame_field], read32)
     return end_frame - read32(f.addr)
 

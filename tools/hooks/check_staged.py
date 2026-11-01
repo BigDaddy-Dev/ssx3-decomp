@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-commit guard: refuse to commit game material (docs/local/STATE.md, spec in retro-vault).
+"""Pre-commit guard: refuse to commit game material (docs/local/state.md, spec in retro-vault).
 
 A superset of .github/workflows/no-game-material.yml: the disc, extracted or
 generated code, RAM/VRAM/GS dumps, savestates, and binaries over 1 MiB.

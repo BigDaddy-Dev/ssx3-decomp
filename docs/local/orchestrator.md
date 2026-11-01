@@ -9,7 +9,7 @@ adds the local plumbing.
 - One heavy process at a time: wrap every cargo build/test and game run in
   `flock target/.heavy.lock …` (another agent may share the machine).
 - `python3 tools/agents/ledger.py status` must say the budget is OK.
-- Branches and merge rules: see `HANDOVER.md`. In short: `wave-N` from `tooling`; upstream PRs are
+- Branches and merge rules: see `handover.md`. In short: `wave-N` from `tooling`; upstream PRs are
   cut onto `upstream-pr/wave-N` from `main` with only the port commits (no `docs/local`, no
   `tools/agents`, no `tools/pcsx2-diff`); `main` only fast-forwards from upstream.
 
@@ -45,7 +45,7 @@ adds the local plumbing.
   wave, or OpenRouter cost per passed function above Claude's → start the next wave Claude-first.
 - `python3 tools/pcsx2-diff/run.py p1_race_snow_jam` (when the runner exists) and look at the trend in
   `tools/pcsx2-diff/history.jsonl`; an earlier first divergence → `tools/bisect_overrides.py`.
-- Update `docs/local/STATE.md` (pass rates, cost, next wave).
+- Update `docs/local/state.md` (pass rates, cost, next wave).
 
 ## Recovering the budget gate
 
@@ -54,7 +54,7 @@ OpenRouter activity page (project key's account), put the real cost into that le
 
 ## Closing a wave
 
-1. `ledger.py status` → wave numbers into `STATE.md` (passed / skipped / cost per passed function).
+1. `ledger.py status` → wave numbers into `state.md` (passed / skipped / cost per passed function).
 2. Tooling fixes made on `wave-N` → `git cherry-pick` onto `tooling`.
 3. `git switch -c upstream-pr/wave-N main` and cherry-pick only the installed-and-reorganised port
    commits; build, test and gate on that branch; draft the PR text in `docs/local/`.

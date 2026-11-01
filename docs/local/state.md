@@ -12,7 +12,7 @@ One heavy process at a time (a build or a game run).
   installed in retro-vault `library/tools/ghidra/`; PCSX2 PINE on (slot 28011). GUI checks pending.
 - P1 Linux playability: launcher in ES-DE Ports ("SSX 3 (Native)"); playtest not started.
 - P2 PCSX2 comparison: trace hook (`SSX3_STATE_TRACE`) in, gate green; pcsx2-diff core in;
-  `.p2m2` layout in `docs/local/l3-spike.md`. Needs: PINE during playback, frame-counter address,
+  `.p2m2` layout in `docs/local/pcsx2-comparison.md`. Needs: PINE during playback, frame-counter address,
   `fields.toml`, the runner (`run.py`).
 - P3 Agent porting: ledger, guard, dispatcher done; real end-to-end writer run OK (DeepSeek V4.1 Flash,
   $0.0026). Needs: orchestrator runbook and the first real wave.
@@ -38,3 +38,8 @@ One heavy process at a time (a build or a game run).
   (pointer chains); .p2m2 playback drove PCSX2 boot → Snow Jam race; first native-vs-PCSX2 comparison
   ran end to end. Native race starts ~900 frames earlier, so in-race inputs must be race-relative
   (next: Task 8 runner). Open: always-on counters tick 10× per frame natively.
+- 2026-11-01 (end of setup session): comparison runner merged (first divergence at race frame 1:
+  AI riders 4/5 grid). Wave 1 started (12 functions, 4 lanes); three dispatcher bugs fixed live.
+  Agreed the wave cycle and merge rules (handover.md). `tooling` pushed to origin as a backup;
+  `upstream-pr/state-trace` cut and verified, PR not opened. Docs renamed to kebab-case.
+  Next session: wave 1 from step 4 (verify), per handover.md.

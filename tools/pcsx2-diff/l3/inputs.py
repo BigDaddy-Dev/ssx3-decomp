@@ -1,6 +1,6 @@
 """Turn an upstream scenario input script (SSX3_INPUT) into a PCSX2 .p2m2 input recording.
 
-Layout: docs/local/l3-spike.md (PCSX2 v2.8.2 InputRecordingFile/PadData).
+Layout: docs/local/pcsx2-comparison.md (PCSX2 v2.8.2 InputRecordingFile/PadData).
 """
 import struct
 

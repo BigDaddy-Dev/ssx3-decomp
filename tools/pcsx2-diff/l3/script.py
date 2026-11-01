@@ -1,7 +1,7 @@
 """Scenario input scripts (SSX3_INPUT `frame:buttons:frames,...`): split into menu presses (timed from
 boot) and in-race presses, and re-time the in-race part per side so it lands on the same race frames.
 
-The native build reaches a race ~900 frames before PCSX2 on the same script (docs/local/l3-spike.md),
+The native build reaches a race ~900 frames before PCSX2 on the same script (docs/local/pcsx2-comparison.md),
 so boot-timed riding inputs hit different race frames on each side.
 """
 from dataclasses import dataclass
